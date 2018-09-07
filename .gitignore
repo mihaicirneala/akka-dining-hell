@@ -1,2 +1,10 @@
+/bin/
 *.class
-*.log
+target
+build
+.cache
+.classpath
+.project
+.settings
+.worksheet
+.idea
