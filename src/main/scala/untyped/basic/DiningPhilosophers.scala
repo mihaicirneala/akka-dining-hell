@@ -128,13 +128,14 @@ class Philosopher(name: String, left: ActorRef, right: ActorRef) extends Actor {
 
 
 object DiningPhilosophers {
+  val tableSize = 5
   val system = ActorSystem()
 
   def main(args: Array[String]): Unit = {
     //Create 5 philosophers and assign them their left and right chopstick
-    val chopsticks = for (i <- 1 to 5) yield system.actorOf(Props[Chopstick], "Chopstick-" + i)
-    val philosophers = for (i <- 0 to 4)  yield {
-      system.actorOf(Props(classOf[Philosopher], "Philosopher-" + i, chopsticks(i), chopsticks((i + 1) % 5)))
+    val chopsticks = for (i <- 1 to tableSize) yield system.actorOf(Props[Chopstick], "Chopstick-" + i)
+    val philosophers = for (i <- 0 until chopsticks.size)  yield {
+      system.actorOf(Props(classOf[Philosopher], "Philosopher-" + i, chopsticks(i), chopsticks((i + 1) % tableSize)))
     }
 
     //Signal all philosophers that they should start thinking, and watch the show

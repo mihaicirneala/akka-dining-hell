@@ -5,6 +5,10 @@ import akka.actor.typed.scaladsl.Behaviors
 
 import scala.concurrent.duration._
 
+case class TableSeat(philosopher: ActorRef[Philosopher.PhilosopherProtocol],
+                     leftChopstick: ActorRef[Chopstick.ChopstickProtocol],
+                     rightChopstick: ActorRef[Chopstick.ChopstickProtocol])
+
 object Chopstick {
   import Philosopher._
 
@@ -34,10 +38,6 @@ object Chopstick {
 
 object Philosopher {
   import Chopstick._
-
-  case class TableSeat(philosopher: ActorRef[PhilosopherProtocol],
-                       leftChopstick: ActorRef[ChopstickProtocol],
-                       rightChopstick: ActorRef[ChopstickProtocol])
 
   sealed trait PhilosopherProtocol
   final case class Eat(seat: TableSeat) extends PhilosopherProtocol
@@ -131,18 +131,18 @@ object Philosopher {
 }
 
 object DiningPhilosophers {
-
   final case class StartSimulation()
+
+  val tableSize = 5
 
   def main(args: Array[String]): Unit = {
     val creator: Behavior[StartSimulation] = Behaviors.setup { context =>
-      //Create 5 philosophers and assign them their left and right chopstick
-      val chopsticks = for (i <- 1 to 5) yield context.spawn(Chopstick.available, "Chopstick-" + i)
-      val philosophers = for (i <- 1 to 5) yield context.spawn(Philosopher.idle, "Philosopher-" + i)
-      val seats = for (i <- 0 to 4) yield {
-        Philosopher.TableSeat(philosophers(i), chopsticks(i), chopsticks((i + 1) % 5))
+      //Create philosophers and assign them their left and right chopstick
+      val chopsticks = for (i <- 1 to tableSize) yield context.spawn(Chopstick.available, "Chopstick-" + i)
+      val philosophers = for (i <- 1 to tableSize) yield context.spawn(Philosopher.idle, "Philosopher-" + i)
+      val seats = for (i <- 0 until tableSize) yield {
+        TableSeat(philosophers(i), chopsticks(i), chopsticks((i + 1) % tableSize))
       }
-
       //Signal all philosophers that they should start thinking, and watch the show
       Behaviors.receiveMessage { _ =>
         seats.foreach { seat =>
