@@ -73,7 +73,7 @@ object Philosopher {
   //When a philosopher is waiting for the last chopstick it can either obtain it
   //and start eating, or the other chopstick was busy, and the philosopher goes
   //back to think about how he should obtain his chopsticks :-)
-  def waitingFor: Behavior[PhilosopherProtocol] = Behaviors.receive { (ctx, msg) =>
+  val waitingFor: Behavior[PhilosopherProtocol] = Behaviors.receive { (ctx, msg) =>
     msg match {
       case ChopstickTaken(chopstickToWaitFor, seat) =>
         println("%s has picked up %s and %s and starts to eat".format(seat.philosopher.path.name, seat.leftChopstick.path.name, seat.rightChopstick.path.name))
@@ -91,7 +91,7 @@ object Philosopher {
   //When the results of the other grab comes back,
   //he needs to put it back if he got the other one.
   //Then go back and think and try to grab the chopsticks again
-  def deniedChopstick: Behavior[PhilosopherProtocol] = Behaviors.receive { (ctx, msg) =>
+  val deniedChopstick: Behavior[PhilosopherProtocol] = Behaviors.receive { (ctx, msg) =>
     msg match {
       case ChopstickTaken(chopstick, seat) =>
         chopstick ! PutChopstick(seat)
@@ -106,7 +106,7 @@ object Philosopher {
 
   //When a philosopher is eating, he can decide to start to think,
   //then he puts down his chopsticks and starts to think
-  def eating: Behavior[PhilosopherProtocol] = Behaviors.receive { (ctx, msg) =>
+  val eating: Behavior[PhilosopherProtocol] = Behaviors.receive { (ctx, msg) =>
     msg match {
       case Think(seat) =>
         seat.leftChopstick ! PutChopstick(seat)
@@ -118,7 +118,7 @@ object Philosopher {
     }
   }
 
-  def idle: Behavior[PhilosopherProtocol] = Behaviors.receive { (ctx, msg) =>
+  val idle: Behavior[PhilosopherProtocol] = Behaviors.receive { (ctx, msg) =>
     msg match {
       case Think(seat) =>
         println("%s starts to think".format(seat.philosopher.path.name))
@@ -143,6 +143,7 @@ object DiningPhilosophers {
         Philosopher.TableSeat(philosophers(i), chopsticks(i), chopsticks((i + 1) % 5))
       }
 
+      //Signal all philosophers that they should start thinking, and watch the show
       Behaviors.receiveMessage { _ =>
         seats.foreach { seat =>
           seat.philosopher ! Philosopher.Think(seat)

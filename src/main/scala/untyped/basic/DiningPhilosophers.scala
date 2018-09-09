@@ -127,16 +127,12 @@ class Philosopher(name: String, left: ActorRef, right: ActorRef) extends Actor {
 }
 
 
-object DiningPhilosophersUntyped {
+object DiningPhilosophers {
   val system = ActorSystem()
 
-  def main(args: Array[String]): Unit = run()
-
-  def run(): Unit = {
-    //Create 5 chopsticks
-    val chopsticks = for (i <- 1 to 5) yield system.actorOf(Props[Chopstick], "Chopstick-" + i)
-
+  def main(args: Array[String]): Unit = {
     //Create 5 philosophers and assign them their left and right chopstick
+    val chopsticks = for (i <- 1 to 5) yield system.actorOf(Props[Chopstick], "Chopstick-" + i)
     val philosophers = for (i <- 0 to 4)  yield {
       system.actorOf(Props(classOf[Philosopher], "Philosopher-" + i, chopsticks(i), chopsticks((i + 1) % 5)))
     }
@@ -145,14 +141,4 @@ object DiningPhilosophersUntyped {
     philosophers.foreach(_ ! Think)
   }
 }
-
-//  object DiningPhilosophers {
-//    val system = ActorSystem()
-//
-//    def main(args: Array[String]): Unit = {
-//      //Create a chopstick
-//      val chopstickActor = system.actorOf(Props[Chopstick], "Chopstick1")
-//      chopstickActor ! Take(philosopher = ???)
-//    }
-//  }
 
