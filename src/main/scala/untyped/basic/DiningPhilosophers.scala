@@ -1,6 +1,7 @@
 package untyped.basic
 
-import akka.actor._
+ import akka.actor._
+
 import scala.concurrent.duration._
 
 // Akka adaptation of
@@ -10,10 +11,13 @@ import scala.concurrent.duration._
 * First we define our messages, they basically speak for themselves
 */
 sealed trait DiningPhilosopherMessage
+
 final case class Busy(chopstick: ActorRef) extends DiningPhilosopherMessage
+final case class Taken(chopstick: ActorRef) extends DiningPhilosopherMessage
+
 final case class Put(philosopher: ActorRef) extends DiningPhilosopherMessage
 final case class Take(philosopher: ActorRef) extends DiningPhilosopherMessage
-final case class Taken(chopstick: ActorRef) extends DiningPhilosopherMessage
+
 object Eat extends DiningPhilosopherMessage
 object Think extends DiningPhilosopherMessage
 
@@ -141,3 +145,14 @@ object DiningPhilosophersUntyped {
     philosophers.foreach(_ ! Think)
   }
 }
+
+//  object DiningPhilosophers {
+//    val system = ActorSystem()
+//
+//    def main(args: Array[String]): Unit = {
+//      //Create a chopstick
+//      val chopstickActor = system.actorOf(Props[Chopstick], "Chopstick1")
+//      chopstickActor ! Take(philosopher = ???)
+//    }
+//  }
+
