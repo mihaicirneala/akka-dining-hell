@@ -50,7 +50,6 @@ object Philosopher {
   val thinking: Behavior[PhilosopherProtocol] = Behaviors.receive { (ctx, msg) =>
     msg match {
       case Eat(seat) =>
-//        println(s"${seat.philosopher.path.name} tries to pick up its chopsticks and eat")
         seat.leftChopstick ! TakeChopstick(seat)
         seat.rightChopstick ! TakeChopstick(seat)
         hungry
@@ -65,10 +64,8 @@ object Philosopher {
   val hungry: Behavior[PhilosopherProtocol] = Behaviors.receive { (ctx, msg) =>
     msg match {
       case ChopstickTaken(chopstick, seat) =>
-//        println(s"${seat.philosopher.path.name} succeeds in taking ${chopstick.path.name}")
         waitingFor
       case ChopstickBusy(chopstick, seat) =>
-//        println(s"${seat.philosopher.path.name} finds out that the first ${chopstick.path.name} is busy")
         deniedChopstick
       case _ => Behaviors.same
     }
@@ -85,7 +82,6 @@ object Philosopher {
       case ChopstickBusy(chopstick, seat) =>
         val otherChopstick = if (seat.leftChopstick == chopstick) seat.rightChopstick else seat.leftChopstick
         otherChopstick ! PutChopstick(seat)
-//        println(s"${seat.philosopher.path.name} finds out that the second ${chopstick.path.name} is busy")
         ctx.schedule(10.milliseconds, ctx.self, Eat(seat))
         thinking
       case _ => Behaviors.same
@@ -136,10 +132,10 @@ object Philosopher {
 
 object DiningPhilosophers {
 
-  final case class Start()
+  final case class StartSimulation()
 
   def main(args: Array[String]): Unit = {
-    val creator: Behavior[Start] = Behaviors.setup { context =>
+    val creator: Behavior[StartSimulation] = Behaviors.setup { context =>
       //Create 5 philosophers and assign them their left and right chopstick
       val chopsticks = for (i <- 1 to 5) yield context.spawn(Chopstick.available, "Chopstick-" + i)
       val philosophers = for (i <- 1 to 5) yield context.spawn(Philosopher.idle, "Philosopher-" + i)
@@ -155,7 +151,7 @@ object DiningPhilosophers {
       }
     }
 
-    val system: ActorSystem[Start] = ActorSystem(creator, "creator")
-    system ! Start()
+    val system: ActorSystem[StartSimulation] = ActorSystem(creator, "creator")
+    system ! StartSimulation()
   }
 }
