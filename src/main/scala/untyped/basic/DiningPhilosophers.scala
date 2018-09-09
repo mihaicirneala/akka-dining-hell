@@ -134,12 +134,12 @@ object DiningPhilosophersUntyped {
 
   def run(): Unit = {
     //Create 5 chopsticks
-    val chopsticks = for (i <- 1 to 5) yield system.actorOf(Props[Chopstick], "Chopstick" + i)
+    val chopsticks = for (i <- 1 to 5) yield system.actorOf(Props[Chopstick], "Chopstick-" + i)
 
     //Create 5 philosophers and assign them their left and right chopstick
-    val philosophers = for {
-      (name, i) <- List("Ghosh", "Boner", "Klang", "Krasser", "Manie").zipWithIndex
-    } yield system.actorOf(Props(classOf[Philosopher], name, chopsticks(i), chopsticks((i + 1) % 5)))
+    val philosophers = for (i <- 0 to 4)  yield {
+      system.actorOf(Props(classOf[Philosopher], "Philosopher-" + i, chopsticks(i), chopsticks((i + 1) % 5)))
+    }
 
     //Signal all philosophers that they should start thinking, and watch the show
     philosophers.foreach(_ ! Think)
