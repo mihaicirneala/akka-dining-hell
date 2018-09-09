@@ -1,6 +1,6 @@
-package untyped.basic
+package basic.untyped
 
- import akka.actor._
+import akka.actor._
 
 import scala.concurrent.duration._
 

@@ -1,4 +1,4 @@
-package typed.basic
+package basic.typed
 
 import akka.actor.typed._
 import akka.actor.typed.scaladsl.Behaviors
