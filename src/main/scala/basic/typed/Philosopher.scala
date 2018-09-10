@@ -1,40 +1,13 @@
 package basic.typed
 
-import akka.actor.typed._
+import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
-
 import scala.concurrent.duration._
+
 
 case class TableSeat(philosopher: ActorRef[Philosopher.PhilosopherProtocol],
                      leftChopstick: ActorRef[Chopstick.ChopstickProtocol],
                      rightChopstick: ActorRef[Chopstick.ChopstickProtocol])
-
-object Chopstick {
-  import Philosopher._
-
-  sealed trait ChopstickProtocol
-  final case class PutChopstick(seat: TableSeat) extends ChopstickProtocol
-  final case class TakeChopstick(seat: TableSeat) extends ChopstickProtocol
-
-  val available: Behavior[ChopstickProtocol] = Behaviors.receive { (ctx, msg) =>
-    msg match {
-      case TakeChopstick(seat) =>
-        seat.philosopher ! ChopstickTaken(ctx.self, seat)
-        Chopstick.taken
-      case _ => Behaviors.same
-    }
-  }
-
-  val taken: Behavior[ChopstickProtocol] = Behaviors.receive { (ctx, msg) =>
-    msg match {
-      case TakeChopstick(otherSeat) =>
-        otherSeat.philosopher ! ChopstickBusy(ctx.self, otherSeat)
-        Behaviors.same
-      case PutChopstick(seat) => Chopstick.available
-      case _ => Behaviors.same
-    }
-  }
-}
 
 object Philosopher {
   import Chopstick._
@@ -76,7 +49,7 @@ object Philosopher {
   val waitingFor: Behavior[PhilosopherProtocol] = Behaviors.receive { (ctx, msg) =>
     msg match {
       case ChopstickTaken(chopstickToWaitFor, seat) =>
-        println("%s has picked up %s and %s and starts to eat".format(seat.philosopher.path.name, seat.leftChopstick.path.name, seat.rightChopstick.path.name))
+        println(s"🥢  ${seat.philosopher.path.name} has picked up ${seat.leftChopstick.path.name} and ${seat.rightChopstick.path.name} and starts to eat")
         ctx.schedule(5.seconds, ctx.self, Think(seat))
         eating
       case ChopstickBusy(chopstick, seat) =>
@@ -111,7 +84,7 @@ object Philosopher {
       case Think(seat) =>
         seat.leftChopstick ! PutChopstick(seat)
         seat.rightChopstick ! PutChopstick(seat)
-        println("%s puts down his chopsticks and starts to think".format(seat.philosopher.path.name))
+        println(s"🥢  ${seat.philosopher.path.name} puts down his chopsticks and starts to think")
         ctx.schedule(5.seconds, ctx.self, Eat(seat))
         thinking
       case _ => Behaviors.same
@@ -121,38 +94,11 @@ object Philosopher {
   val idle: Behavior[PhilosopherProtocol] = Behaviors.receive { (ctx, msg) =>
     msg match {
       case Think(seat) =>
-        println("%s starts to think".format(seat.philosopher.path.name))
+        println(s"🥢  ${seat.philosopher.path.name} starts to think")
         ctx.schedule(5.seconds, ctx.self, Eat(seat))
         thinking
       case _ => Behaviors.same
     }
   }
 
-}
-
-object DiningPhilosophers {
-  final case class StartSimulation()
-
-  val tableSize = 5
-
-  def main(args: Array[String]): Unit = {
-    val creator: Behavior[StartSimulation] = Behaviors.setup { context =>
-      //Create philosophers and assign them their left and right chopstick
-      val chopsticks = for (i <- 1 to tableSize) yield context.spawn(Chopstick.available, "Chopstick-" + i)
-      val philosophers = for (i <- 1 to tableSize) yield context.spawn(Philosopher.idle, "Philosopher-" + i)
-      val seats = for (i <- 0 until tableSize) yield {
-        TableSeat(philosophers(i), chopsticks(i), chopsticks((i + 1) % tableSize))
-      }
-      //Signal all philosophers that they should start thinking, and watch the show
-      Behaviors.receiveMessage { _ =>
-        seats.foreach { seat =>
-          seat.philosopher ! Philosopher.Think(seat)
-        }
-        Behaviors.same
-      }
-    }
-
-    val system: ActorSystem[StartSimulation] = ActorSystem(creator, "creator")
-    system ! StartSimulation()
-  }
 }

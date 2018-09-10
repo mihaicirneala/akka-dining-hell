@@ -1,41 +1,15 @@
 package supervision.typed
 
-import akka.actor.typed._
-import akka.actor.typed.scaladsl.{ActorContext, Behaviors, MutableBehavior}
-import org.joda.time.DateTime
+import akka.actor.typed.{ActorRef, Behavior, PostStop, PreRestart, Signal}
+import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 
 import scala.concurrent.duration._
+
 
 case class TableSeat(philosopher: ActorRef[Philosopher.PhilosopherProtocol],
                      leftChopstick: ActorRef[Chopstick.ChopstickProtocol],
                      rightChopstick: ActorRef[Chopstick.ChopstickProtocol])
 
-object Chopstick {
-  import Philosopher._
-
-  sealed trait ChopstickProtocol
-  final case class PutChopstick(philosopher: ActorRef[Philosopher.PhilosopherProtocol]) extends ChopstickProtocol
-  final case class TakeChopstick(philosopher: ActorRef[Philosopher.PhilosopherProtocol]) extends ChopstickProtocol
-
-  val available: Behavior[ChopstickProtocol] = Behaviors.receive { (ctx, msg) =>
-    msg match {
-      case TakeChopstick(philosopher) =>
-        philosopher ! ChopstickTaken(ctx.self)
-        Chopstick.taken
-      case _ => Behaviors.same
-    }
-  }
-
-  val taken: Behavior[ChopstickProtocol] = Behaviors.receive { (ctx, msg) =>
-    msg match {
-      case TakeChopstick(otherPhilosopher) =>
-        otherPhilosopher ! ChopstickBusy(ctx.self)
-        Behaviors.same
-      case PutChopstick(seat) => Chopstick.available
-      case _ => Behaviors.same
-    }
-  }
-}
 
 object Philosopher {
   import Chopstick._
@@ -72,16 +46,16 @@ object Philosopher {
   //When a philosopher is thinking it can become hungry
   //and try to pick up its chopsticks and eat
   def thinking(seat: TableSeat): Behavior[PhilosopherProtocol] = Behaviors.receive[PhilosopherProtocol] { (ctx, msg) =>
-      msg match {
-        case Bomb(devil, creator) => handleBomb(ctx.self.path.name, devil, creator)
-          Behaviors.same
-        case Eat =>
-          seat.leftChopstick ! TakeChopstick(seat.philosopher)
-          seat.rightChopstick ! TakeChopstick(seat.philosopher)
-          hungry(seat)
-        case _ => Behaviors.same
-      }
-    } receiveSignal handleSignal(seat)
+    msg match {
+      case Bomb(devil, creator) => handleBomb(ctx.self.path.name, devil, creator)
+        Behaviors.same
+      case Eat =>
+        seat.leftChopstick ! TakeChopstick(seat.philosopher)
+        seat.rightChopstick ! TakeChopstick(seat.philosopher)
+        hungry(seat)
+      case _ => Behaviors.same
+    }
+  } receiveSignal handleSignal(seat)
 
   //When a philosopher is hungry it tries to pick up its chopsticks and eat
   //When it picks one up, it goes into wait for the other
@@ -166,109 +140,3 @@ object Philosopher {
 
 }
 
-object Creator {
-
-  sealed trait CreatorProtocol
-  final case class StartSimulation() extends CreatorProtocol
-  final case class Bomb(devil: ActorRef[Devil.DevilProtocol]) extends CreatorProtocol
-
-  val tableSize = 5
-
-  private val restartStrategy = SupervisorStrategy.restart
-
-  val creating: Behavior[CreatorProtocol] = Behaviors.setup { context =>
-    //Create philosophers and assign them their left and right chopstick
-    val chopsticks = for (i <- 1 to tableSize) yield context.spawn(Chopstick.available, "Chopstick-" + i)
-    val philosophers = for (i <- 1 to tableSize) yield {
-      context.spawn(Behaviors.supervise(Philosopher.idle).onFailure(SupervisorStrategy.restart), "Philosopher-" + i)
-    }
-    val seats = for (i <- 0 until tableSize) yield {
-      TableSeat(philosophers(i), chopsticks(i), chopsticks((i + 1) % tableSize))
-    }
-    val devil = context.spawn(Devil.evil, "Devil")
-    Behaviors.receiveMessage {
-      case StartSimulation() =>
-        seats.foreach { seat =>
-          seat.philosopher ! Philosopher.Start(seat)
-          devil ! Devil.PhilosopherCreated(seat.philosopher)
-        }
-        devil ! Devil.StartTheEvil(context.self)
-        Behaviors.same
-      case Bomb(devil) =>
-        val phIndex = 1 + (new scala.util.Random).nextInt(tableSize)
-        println(s"💣 Creator gets a bomb and throws it to Philosopher-$phIndex")
-        context.child("Philosopher-" + phIndex).foreach { child =>
-          val philosopher = child.asInstanceOf[ActorRef[Philosopher.PhilosopherProtocol]]
-          context.schedule(3.seconds, philosopher, Philosopher.Bomb(devil, context.self))
-        }
-        Behaviors.same
-    }
-  }
-}
-
-object Devil {
-  sealed trait DevilProtocol
-  final case class PhilosopherCreated(philosopher: ActorRef[Philosopher.PhilosopherProtocol]) extends DevilProtocol
-  final case class StartTheEvil(creator: ActorRef[Creator.CreatorProtocol]) extends DevilProtocol
-  final case class ThrowNewBomb(creator: ActorRef[Creator.CreatorProtocol]) extends DevilProtocol
-  final case class BombExploded(philosopher: ActorRef[Philosopher.PhilosopherProtocol]) extends DevilProtocol
-
-  val bombTimeout = 15
-  val bombChances = 4
-
-  val evil: Behavior[DevilProtocol] = Behaviors.setup(new Devil(_))
-
-  def isBadLuck: Boolean = {
-    val firstRandom = (new scala.util.Random).nextInt(bombChances)
-    val secondRandom = (new scala.util.Random).nextInt(bombChances)
-    firstRandom == secondRandom
-  }
-}
-
-class Devil(ctx: ActorContext[Devil.DevilProtocol]) extends MutableBehavior[Devil.DevilProtocol] {
-  import Devil._
-
-  var circulatingBomb = false
-  var bombThrowedAt = DateTime.now()
-
-  override def onMessage(msg: Devil.DevilProtocol): Behavior[Devil.DevilProtocol] = {
-    msg match {
-      case PhilosopherCreated(philosopher) =>
-        ctx.watchWith(philosopher, BombExploded(philosopher)) // TODO: fix this. watching doesn't actually work
-        this
-      case StartTheEvil(creator) =>
-        scheduleBombThrowing(creator)
-        this
-      case ThrowNewBomb(creator) =>
-        if (!circulatingBomb) {
-          bombThrowedAt = DateTime.now()
-          println(s"💣 Devil is throwing a new bomb")
-          creator ! Creator.Bomb(ctx.self)
-          circulatingBomb = true
-        } else if (bombThrowedAt.plusSeconds(bombTimeout).getMillis < DateTime.now.getMillis) {
-          println(s"💣 Devil's bomb probably got lost")
-          circulatingBomb = false
-        }
-        scheduleBombThrowing(creator)
-        this
-      case BombExploded(philosopher) =>
-        println(s"💣 Devil got explosion confirmation in hands of ${philosopher.path.name}")
-        circulatingBomb = false
-        this
-      case _ => this
-    }
-  }
-
-  private def scheduleBombThrowing(creator: ActorRef[Creator.CreatorProtocol]): Unit = {
-//    val random = 7 + (new scala.util.Random).nextInt(15)
-    ctx.schedule(2.seconds, ctx.self, ThrowNewBomb(creator))
-  }
-}
-
-object DiningPhilosophers {
-
-  def main(args: Array[String]): Unit = {
-    val system: ActorSystem[Creator.StartSimulation] = ActorSystem(Creator.creating, "creator")
-    system ! Creator.StartSimulation()
-  }
-}
