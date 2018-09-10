@@ -9,9 +9,14 @@ Example projects of using Akka typed and untyped actors.
   * Here we introduce a `Creator` that created and supervises the other actors and a `Devil` that wants to do evil.
   * The `Devil` creates a bomb and sends it to the Creator and the philosophers, and the bomb is passed between the Creator and a random philosopher until it explodes. When it explodes, the philosopher actor is stoped and the supervisor restarts it. 
   * The `Devil` tries his best to make sure always a bomb is circulating between philosophers, but not more than one. In order to do that, he monitors the philosophers for termination and assumes that his bomb exploded.
-  
-To do
+
+### How to run
+
+ $ sbt run
+
+### To do
 
 * fix monitoring
 * add tests
 * add java implementations
+
