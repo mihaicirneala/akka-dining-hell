@@ -14,6 +14,7 @@ resolvers += "Typesafe Releases" at "http://repo.typesafe.com/typesafe/releases"
     "com.typesafe.akka" %% "akka-actor" % "2.5.16",
     "com.typesafe.akka" %% "akka-actor-typed" % "2.5.16",
     "org.scalatest" %% "scalatest" % "3.0.5" % "test",
-    "com.typesafe.akka" %% "akka-testkit" % "2.5.16"
+    "com.typesafe.akka" %% "akka-testkit" % "2.5.16",
+    "joda-time" % "joda-time" % "2.10"
   )
 
