@@ -1,4 +1,4 @@
-package supervision.typed
+package dininghell.typed
 
 import akka.actor.typed.{ActorRef, Behavior, SupervisorStrategy}
 import akka.actor.typed.scaladsl.Behaviors

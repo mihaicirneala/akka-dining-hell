@@ -1,4 +1,4 @@
-package basic.untyped
+package dining.untyped
 
 import akka.actor._
 

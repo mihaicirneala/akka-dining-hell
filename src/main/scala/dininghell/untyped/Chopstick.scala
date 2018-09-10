@@ -1,4 +1,4 @@
-package supervision.untyped
+package dininghell.untyped
 
 import akka.actor.{Actor, ActorRef}
 

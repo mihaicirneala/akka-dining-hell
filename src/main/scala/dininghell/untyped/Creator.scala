@@ -1,4 +1,4 @@
-package supervision.untyped
+package dininghell.untyped
 
 import akka.actor.{Actor, ActorInitializationException, ActorKilledException, DeathPactException, OneForOneStrategy, Props}
 import akka.actor.SupervisorStrategy.{Restart, Stop}

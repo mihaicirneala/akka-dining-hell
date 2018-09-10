@@ -1,4 +1,4 @@
-package basic.typed
+package dining.typed
 
 import akka.actor.typed._
 import akka.actor.typed.scaladsl.Behaviors
