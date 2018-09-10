@@ -117,7 +117,6 @@ class Philosopher(name: String, left: ActorRef, right: ActorRef) extends Actor {
   //All philosophers start in a non-eating state
   def receive = {
     case Think =>
-      sender() ! Creator.PhilosopherCreated(self)
       println("%s starts to think".format(name))
       startThinking(5.seconds)
   }
@@ -136,40 +135,44 @@ class Philosopher(name: String, left: ActorRef, right: ActorRef) extends Actor {
 object Creator {
   sealed trait CreatorProtocol
   object StartSimulation extends CreatorProtocol
-  final case class PhilosopherCreated(philosopher: ActorRef) extends CreatorProtocol
 }
 
 class Creator(tableSize: Int) extends Actor {
-  override val supervisorStrategy =
-    OneForOneStrategy() {
-      case _: ActorInitializationException ⇒ Stop
-      case _: ActorKilledException         ⇒ Restart
-      case _: DeathPactException           ⇒ Stop
-      case _: Exception                    ⇒ Restart
-    }
+//  override val supervisorStrategy =
+//    OneForOneStrategy() {
+//      case _: ActorInitializationException ⇒ Stop
+//      case _: ActorKilledException         ⇒ Restart
+//      case _: DeathPactException           ⇒ Stop
+//      case _: Exception                    ⇒ Restart
+//    }
 
   import Creator._
   import context._
 
-  val devil = context.actorOf(Props[Devil], "Devil")
+  private val devil = context.actorOf(Props[Devil], "Devil")
+  private val chopsticks = for (i <- 1 to tableSize) yield context.actorOf(Props[Chopstick], "Chopstick-" + i)
+  //Create 5 philosophers and assign them their left and right chopstick
+  private def createPhilospher(i: Int) = context.actorOf(Props(classOf[Philosopher], "Philosopher-" + i, chopsticks(i), chopsticks((i + 1) % tableSize)), "Philosopher-" + i)
+  private var philosophers = for (i <- chopsticks.indices)  yield createPhilospher(i)
 
   def receive: Receive = {
     case StartSimulation =>
-      //Create 5 philosophers and assign them their left and right chopstick
-      val chopsticks = for (i <- 1 to tableSize) yield context.actorOf(Props[Chopstick], "Chopstick-" + i)
-      val philosophers = for (i <- 0 until chopsticks.size)  yield {
-        context.actorOf(Props(classOf[Philosopher], "Philosopher-" + i, chopsticks(i), chopsticks((i + 1) % tableSize)), "Philosopher-" + i)
-      }
 
       //Signal all philosophers that they should start thinking, and watch the show
       philosophers.foreach { philosopher =>
         context.watch(philosopher)
         philosopher ! Think
+        devil ! Devil.PhilosopherCreated(philosopher)
       }
       devil ! Devil.StartTheEvil
     case Terminated(philosopher) =>
-//      println(s"Creator.PhilosopherCreated(${philosopher.path.name})")
-      devil ! Devil.PhilosopherCreated(philosopher)
+      val index = philosophers.indexOf(philosopher)
+      chopsticks(index) ! Put(philosopher)
+      chopsticks((index + 1) % tableSize) ! Put(philosopher)
+      val newPhilosopher = createPhilospher(index)
+      philosophers = philosophers.updated(index, newPhilosopher)
+      newPhilosopher ! Think
+      devil ! Devil.PhilosopherCreated(newPhilosopher)
   }
 }
 
@@ -177,7 +180,7 @@ object Devil {
   sealed trait DevilProtocol
   final case class PhilosopherCreated(philosopher: ActorRef) extends DevilProtocol
   object StartTheEvil extends DevilProtocol
-  object KillPhilosopher extends DevilProtocol
+  object KillRandomPhilosopher extends DevilProtocol
 }
 
 class Devil extends Actor {
@@ -189,22 +192,24 @@ class Devil extends Actor {
 
   def receive: Receive = {
     case PhilosopherCreated(philosopher) =>
-//      println(s"Devil.PhilosopherCreated(${philosopher.path.name})")
+      println(s"Devil.PhilosopherCreated(${philosopher.path.name})")
       philosophers += philosopher
     case StartTheEvil =>
       scheduleKill()
-    case KillPhilosopher if philosophers.size > 0 =>
-      val philIndex = (new scala.util.Random).nextInt(philosophers.size)
-      val theUnfortunate = philosophers.toSeq(philIndex)
-      println(s"Devil kills ${theUnfortunate.path.name}")
-      theUnfortunate ! Kill
-      philosophers = philosophers.filterNot(_ == theUnfortunate)
+    case KillRandomPhilosopher =>
+      if (philosophers.nonEmpty) {
+        val philIndex = (new scala.util.Random).nextInt(philosophers.size)
+        val theUnfortunate = philosophers.toSeq(philIndex)
+        println(s"Devil kills ${theUnfortunate.path.name}")
+        theUnfortunate ! Kill
+        philosophers = philosophers.filterNot(_ == theUnfortunate)
+      }
       scheduleKill()
   }
 
   private def scheduleKill() = {
     val random = 7 + (new scala.util.Random).nextInt(15)
-    system.scheduler.scheduleOnce(random.seconds, self, KillPhilosopher)
+    system.scheduler.scheduleOnce(random.seconds, self, KillRandomPhilosopher)
   }
 }
 
