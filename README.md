@@ -12,8 +12,9 @@ Example projects of using Akka typed and untyped actors.
 
 ### How to run
 
- $ sbt run
-
+```
+$ sbt run
+```
 ### To do
 
 * fix monitoring
