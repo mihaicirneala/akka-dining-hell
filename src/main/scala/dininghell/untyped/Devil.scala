@@ -39,7 +39,7 @@ class Devil extends Actor {
       if (!circulatingBomb) {
         bombThrowedAt = DateTime.now()
         println(s"💣 Devil is throwing a new bomb")
-        creator ! Creator.Bomb
+        creator ! God.Bomb
         circulatingBomb = true
       } else if (bombThrowedAt.plusSeconds(bombTimeout).getMillis < DateTime.now.getMillis) {
         println(s"💣 Devil's bomb probably got lost")

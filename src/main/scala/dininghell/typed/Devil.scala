@@ -9,8 +9,8 @@ import scala.concurrent.duration._
 object Devil {
   sealed trait DevilProtocol
   final case class PhilosopherCreated(philosopher: ActorRef[Philosopher.PhilosopherProtocol]) extends DevilProtocol
-  final case class StartTheEvil(creator: ActorRef[Creator.CreatorProtocol]) extends DevilProtocol
-  final case class ThrowNewBomb(creator: ActorRef[Creator.CreatorProtocol]) extends DevilProtocol
+  final case class StartTheEvil(creator: ActorRef[God.CreatorProtocol]) extends DevilProtocol
+  final case class ThrowNewBomb(creator: ActorRef[God.CreatorProtocol]) extends DevilProtocol
   final case class BombExploded(philosopher: ActorRef[Philosopher.PhilosopherProtocol]) extends DevilProtocol
 
   val bombTimeout = 15
@@ -43,7 +43,7 @@ class Devil(ctx: ActorContext[Devil.DevilProtocol]) extends MutableBehavior[Devi
         if (!circulatingBomb) {
           bombThrowedAt = DateTime.now()
           println(s"💣 Devil is throwing a new bomb")
-          creator ! Creator.Bomb(ctx.self)
+          creator ! God.Bomb(ctx.self)
           circulatingBomb = true
         } else if (bombThrowedAt.plusSeconds(bombTimeout).getMillis < DateTime.now.getMillis) {
           println(s"💣 Devil's bomb probably got lost")
@@ -59,7 +59,7 @@ class Devil(ctx: ActorContext[Devil.DevilProtocol]) extends MutableBehavior[Devi
     }
   }
 
-  private def scheduleBombThrowing(creator: ActorRef[Creator.CreatorProtocol]): Unit = {
+  private def scheduleBombThrowing(creator: ActorRef[God.CreatorProtocol]): Unit = {
     ctx.schedule(2.seconds, ctx.self, ThrowNewBomb(creator))
   }
 }

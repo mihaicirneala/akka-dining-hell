@@ -20,15 +20,15 @@ object Philosopher {
   object Think extends PhilosopherProtocol
   final case class ChopstickBusy(chopstick: ActorRef[ChopstickProtocol]) extends PhilosopherProtocol
   final case class ChopstickTaken(chopstick: ActorRef[ChopstickProtocol]) extends PhilosopherProtocol
-  final case class Bomb(devil: ActorRef[Devil.DevilProtocol], creator: ActorRef[Creator.CreatorProtocol]) extends PhilosopherProtocol
+  final case class Bomb(devil: ActorRef[Devil.DevilProtocol], creator: ActorRef[God.CreatorProtocol]) extends PhilosopherProtocol
 
-  private def handleBomb(name: String, devil: ActorRef[Devil.DevilProtocol], creator: ActorRef[Creator.CreatorProtocol]): Unit = {
+  private def handleBomb(name: String, devil: ActorRef[Devil.DevilProtocol], creator: ActorRef[God.CreatorProtocol]): Unit = {
     if (Devil.isBadLuck) {
       println(s"💣 Bomb exploded at $name")
       throw new RuntimeException(s"Bomb exploded at $name")
     } else {
       println(s"💣 $name throws the bomb back to Creator")
-      creator ! Creator.Bomb(devil)
+      creator ! God.Bomb(devil)
     }
   }
 

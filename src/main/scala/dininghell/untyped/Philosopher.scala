@@ -28,7 +28,7 @@ class Philosopher(name: String, left: ActorRef, right: ActorRef) extends Actor {
         throw new RuntimeException(s"Bomb exploded at $name")
       } else {
         println(s"💣 $name throws the bomb back to Creator")
-        sender() ! Creator.Bomb
+        sender() ! God.Bomb
       }
   }
 

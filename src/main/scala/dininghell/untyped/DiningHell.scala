@@ -7,8 +7,8 @@ object DiningHell {
   val system = ActorSystem()
 
   def main(args: Array[String]): Unit = {
-    val creator = system.actorOf(Props(classOf[Creator], tableSize), "Creator")
-    creator ! Creator.StartSimulation
+    val creator = system.actorOf(Props(classOf[God], tableSize), "God")
+    creator ! God.StartSimulation
   }
 }
 

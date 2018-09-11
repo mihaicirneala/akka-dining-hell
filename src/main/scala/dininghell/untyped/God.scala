@@ -5,13 +5,13 @@ import akka.actor.SupervisorStrategy.{Restart, Stop}
 import scala.concurrent.duration._
 
 
-object Creator {
+object God {
   sealed trait CreatorProtocol
   object StartSimulation extends CreatorProtocol
   object Bomb extends CreatorProtocol
 }
 
-class Creator(tableSize: Int) extends Actor {
+class God(tableSize: Int) extends Actor {
   override val supervisorStrategy =
     OneForOneStrategy() {
       case _: ActorInitializationException ⇒ Stop
@@ -20,7 +20,7 @@ class Creator(tableSize: Int) extends Actor {
       case _: Exception                    ⇒ Restart
     }
 
-  import Creator._
+  import God._
   import context._
 
   def receive: Receive = {
@@ -39,7 +39,7 @@ class Creator(tableSize: Int) extends Actor {
         devil ! Devil.PhilosopherCreated(philosopher)
       }
       devil ! Devil.StartTheEvil
-    case Creator.Bomb =>
+    case God.Bomb =>
       val phIndex = 1 + (new scala.util.Random).nextInt(tableSize)
       println(s"💣 Creator gets a bomb and throws it to Philosopher-$phIndex")
       context.child("Philosopher-" + phIndex).foreach { philosopher =>

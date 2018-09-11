@@ -4,7 +4,7 @@ import akka.actor.typed.{ActorRef, Behavior, SupervisorStrategy}
 import akka.actor.typed.scaladsl.Behaviors
 import scala.concurrent.duration._
 
-object Creator {
+object God {
 
   sealed trait CreatorProtocol
   final case class StartSimulation() extends CreatorProtocol
