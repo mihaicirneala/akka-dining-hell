@@ -1,4 +1,4 @@
-name := "Akka Dining Philosophers"
+name := "Akka Dining Hell"
 
 organization := "mc"
 
